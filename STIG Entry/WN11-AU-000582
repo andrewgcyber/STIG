@@ -29,13 +29,75 @@
 # WN11-AU-000582
 # Windows 11 must be configured to audit File System successes.
 
-Write-Host "Configuring Audit File System (Success)..." -ForegroundColor Yellow
+#Requires -RunAsAdministrator
 
-# Enable success auditing for the File System subcategory
-auditpol.exe /set /subcategory:"File System" /success:enable
+$ErrorActionPreference = "Stop"
 
-# Verify the configuration
-Write-Host "`nVerifying configuration..." -ForegroundColor Yellow
-auditpol.exe /get /subcategory:"File System"
+$AuditPol   = "$env:SystemRoot\System32\auditpol.exe"
+$AuditFile  = "$env:SystemDrive\audit-policy-verification.csv"
+$Subcategory = "File System"
 
-Write-Host "`nRemediation complete." -ForegroundColor Green
+Write-Host "Remediating WN11-AU-000582..." -ForegroundColor Yellow
+
+try {
+    # Enable successful File System auditing
+    & $AuditPol /set /subcategory:"$Subcategory" /success:enable
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "AuditPol failed to enable File System success auditing."
+    }
+
+    # Verify the current effective audit policy
+    $CurrentPolicy = & $AuditPol /get /subcategory:"$Subcategory" 2>&1
+
+    Write-Host "`nCurrent effective audit policy:" -ForegroundColor Cyan
+    $CurrentPolicy | ForEach-Object { Write-Host $_ }
+
+    if ($LASTEXITCODE -ne 0 -or $CurrentPolicy -notmatch "\bSuccess\b") {
+        throw "The effective File System audit policy does not show Success."
+    }
+
+    # Remove the old export because AuditPol will not overwrite it
+    if (Test-Path -LiteralPath $AuditFile) {
+        Remove-Item -LiteralPath $AuditFile -Force
+    }
+
+    # Create a fresh audit policy backup
+    & $AuditPol /backup /file:"$AuditFile"
+
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $AuditFile)) {
+        throw "Failed to create a fresh audit policy backup."
+    }
+
+    # Verify the exported policy
+    $ExportedPolicy = Import-Csv -LiteralPath $AuditFile |
+        Where-Object {
+            $_.Subcategory -eq $Subcategory
+        }
+
+    if (-not $ExportedPolicy) {
+        throw "The File System subcategory was not found in the audit policy export."
+    }
+
+    Write-Host "`nExported File System audit policy:" -ForegroundColor Cyan
+    $ExportedPolicy | Format-List
+
+    $Setting = $ExportedPolicy |
+        ForEach-Object {
+            $_.PSObject.Properties |
+                Where-Object { $_.Name -match "Inclusion|Setting" } |
+                Select-Object -ExpandProperty Value
+        }
+
+    if ($Setting -notmatch "\bSuccess\b") {
+        throw "The exported File System audit policy does not show Success."
+    }
+
+    Write-Host "`nWN11-AU-000582 was remediated successfully." -ForegroundColor Green
+    Write-Host "Verification file: $AuditFile" -ForegroundColor Green
+    exit 0
+}
+catch {
+    Write-Error "WN11-AU-000582 remediation failed: $($_.Exception.Message)"
+    exit 1
+}
