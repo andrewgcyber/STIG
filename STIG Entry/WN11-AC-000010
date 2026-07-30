@@ -1,0 +1,65 @@
+<#
+.SYNOPSIS
+    This PowerShell script ensures that the number of allowed bad logon attempts must be configured to three or less.
+
+.NOTES
+    Author          : Andrew Gay
+    LinkedIn        : https://www.linkedin.com/in/andrewgaytech/
+    GitHub          : https://github.com/andrewgcyber
+    Date Created    : 2026-07-30
+    Last Modified   : 2026-07-30
+    Version         : 1.0
+    CVEs            : N/A
+    Plugin IDs      : N/A
+    STIG-ID         : WN11-AC-000010 
+    Documentation   : https://stigaview.com/products/win11/v2r1/WN11-AC-000010/
+
+.TESTED ON
+    Date(s) Tested  : 
+    Tested By       : 
+    Systems Tested  : 
+    PowerShell Ver. : 
+
+.USAGE
+    Put any usage instructions here.
+    Example syntax:
+    PS C:\> .\__remediation_template(STIG-ID-WN10-AU-000500).ps1 
+#>
+
+# 
+# STIG Remediation
+# Account Lockout Threshold
+#
+# Required Setting:
+# Account lockout threshold = 3 invalid logon attempts
+
+#Requires -RunAsAdministrator
+
+$ErrorActionPreference = "Stop"
+
+$Threshold = 3
+
+try {
+    Write-Host "Configuring Account Lockout Threshold..." -ForegroundColor Yellow
+
+    # Set Account Lockout Threshold
+    net accounts /lockoutthreshold:$Threshold | Out-Null
+
+    # Verify the setting
+    $LockoutPolicy = net accounts
+
+    Write-Host "`nCurrent Account Lockout Policy:" -ForegroundColor Cyan
+    $LockoutPolicy
+
+    if ($LockoutPolicy -match "Lockout threshold:\s+$Threshold") {
+        Write-Host "`nRemediation successful." -ForegroundColor Green
+        Write-Host "Account lockout threshold is configured to $Threshold invalid logon attempts."
+        exit 0
+    }
+
+    throw "Verification failed. Account lockout threshold was not set correctly."
+}
+catch {
+    Write-Error "Remediation failed: $($_.Exception.Message)"
+    exit 1
+}
