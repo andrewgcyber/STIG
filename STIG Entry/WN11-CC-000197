@@ -1,0 +1,86 @@
+<#
+.SYNOPSIS
+    Microsoft consumer experiences provides users with suggestions, notifications, and recommended Windows Store apps, so disabling it helps prevent the unwanted installation of suggested applications. 
+.NOTES
+    Author          : Andrew Gay
+    LinkedIn        : linkedin.com/in/andrewgaytech/
+    GitHub          : github.com/andrewgcyber
+    Date Created    : 2026-07-29
+    Last Modified   : 2026-07-30
+    Version         : 1.0
+    CVEs            : N/A
+    Plugin IDs      : N/A
+    STIG-ID         : WN11-CC-000197
+    Documentation   : https://stigaview.com/products/win11/v1r5/WN11-CC-000197/
+
+.TESTED ON
+    Date(s) Tested  : 
+    Tested By       : 
+    Systems Tested  : 
+    PowerShell Ver. : 
+
+.USAGE
+    Put any usage instructions here.
+    Example syntax:
+    PS C:\> .\__remediation_template(STIG-ID-WN10-AU-000500).ps1 
+#>
+
+# YOUR CODE GOES HERE
+
+# WN11-CC-000197
+# Turn off Microsoft Consumer Experiences
+# STIG Requirement:
+# HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent
+# DisableWindowsConsumerFeatures = 1 (REG_DWORD)
+
+$RegPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent"
+$ValueName = "DisableWindowsConsumerFeatures"
+$RequiredValue = 1
+
+try {
+    # Create the registry path if it does not exist
+    if (!(Test-Path $RegPath)) {
+        New-Item -Path $RegPath -Force | Out-Null
+        Write-Host "Created registry path: $RegPath"
+    }
+
+    # Create or update the registry value
+    New-ItemProperty `
+        -Path $RegPath `
+        -Name $ValueName `
+        -PropertyType DWord `
+        -Value $RequiredValue `
+        -Force | Out-Null
+
+    # Refresh Computer Group Policy
+    gpupdate /target:computer /force | Out-Null
+
+    # Verify the registry value
+    $CurrentValue = Get-ItemPropertyValue `
+        -Path $RegPath `
+        -Name $ValueName
+
+    if ($CurrentValue -eq $RequiredValue) {
+        Write-Host ""
+        Write-Host "=========================================" -ForegroundColor Green
+        Write-Host "WN11-CC-000197 successfully remediated." -ForegroundColor Green
+        Write-Host "The 'Turn off Microsoft consumer experiences' policy is enabled." -ForegroundColor Green
+        Write-Host "Microsoft Consumer Experiences are disabled." -ForegroundColor Green
+        Write-Host "$ValueName = $CurrentValue" -ForegroundColor Green
+        Write-Host "=========================================" -ForegroundColor Green
+        exit 0
+    }
+    else {
+        Write-Host ""
+        Write-Host "Verification failed." -ForegroundColor Red
+        Write-Host "Expected: $RequiredValue" -ForegroundColor Red
+        Write-Host "Current : $CurrentValue" -ForegroundColor Red
+        exit 1
+    }
+}
+catch {
+    Write-Host ""
+    Write-Host "An error occurred:" -ForegroundColor Red
+    Write-Host $_.Exception.Message -ForegroundColor Red
+    exit 1
+}
