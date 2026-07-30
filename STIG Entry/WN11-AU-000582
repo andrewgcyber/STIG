@@ -26,4 +26,16 @@
     PS C:\> .\__remediation_template(STIG-ID-WN10-AU-000500).ps1 
 #>
 
-# YOUR CODE GOES HERE
+# WN11-AU-000582
+# Windows 11 must be configured to audit File System successes.
+
+Write-Host "Configuring Audit File System (Success)..." -ForegroundColor Yellow
+
+# Enable success auditing for the File System subcategory
+auditpol.exe /set /subcategory:"File System" /success:enable
+
+# Verify the configuration
+Write-Host "`nVerifying configuration..." -ForegroundColor Yellow
+auditpol.exe /get /subcategory:"File System"
+
+Write-Host "`nRemediation complete." -ForegroundColor Green
