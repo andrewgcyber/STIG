@@ -1,0 +1,28 @@
+<#
+.SYNOPSIS
+    This PowerShell script ensures that the indexing of encrypted files must be turned off.
+
+.NOTES
+    Author          : Andrew Gay
+    LinkedIn        : https://www.linkedin.com/in/andrewgaytech/
+    GitHub          : https://github.com/andrewgcyber
+    Date Created    : 2026-07-31
+    Last Modified   : 2026-07-31
+    Version         : 1.0
+    CVEs            : N/A
+    Plugin IDs      : N/A
+    STIG-ID         : WN11-CC-000305 
+    Documentation   : https://stigaview.com/products/win11/v1r5/WN11-CC-000305/
+
+.TESTED ON
+    Date(s) Tested  : 
+    Tested By       : 
+    Systems Tested  : 
+    PowerShell Ver. : 
+
+.USAGE
+    Put any usage instructions here.
+    Example syntax:
+    PS C:\> .\__remediation_template(STIG-ID-WN10-AU-000500).ps1 
+#>
+
