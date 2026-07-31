@@ -1,1 +1,27 @@
+<#
+.SYNOPSIS
+    This STIG ensures that users are not allowed to change installation options
+.NOTES
+    Author          : Andrew Gay
+    LinkedIn        : linkedin.com/in/andrewgaytech/
+    GitHub          : github.com/andrewgcyber
+    Date Created    : 2026-07-31
+    Last Modified   : 2026-07-31
+    Version         : 1.0
+    CVEs            : N/A
+    Plugin IDs      : N/A
+    STIG-ID         : WN11-CC-000310
+    Documentation   : https://stigaview.com/products/win11/v2r1/WN11-CC-000310/
+
+.TESTED ON
+    Date(s) Tested  : 
+    Tested By       : 
+    Systems Tested  : 
+    PowerShell Ver. : 
+
+.USAGE
+    Put any usage instructions here.
+    Example syntax:
+    PS C:\> .\__remediation_template(STIG-ID-WN10-AU-000500).ps1 
+#>
 
