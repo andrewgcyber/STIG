@@ -24,4 +24,65 @@
     Example syntax:
     PS C:\> .\__remediation_template(STIG-ID-WN10-AU-000500).ps1 
 #>
+# ============================================================
+# STIG Remediation
+# Disable "Allow user control over installs"
+#
+# Registry:
+# HKLM\SOFTWARE\Policies\Microsoft\Windows\Installer
+# EnableUserControl = 0 (REG_DWORD)
+# ============================================================
 
+$RegistryPath  = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Installer"
+$ValueName     = "EnableUserControl"
+$RequiredValue = 0
+
+# Verify the script is running as Administrator
+$CurrentIdentity = [Security.Principal.WindowsIdentity]::GetCurrent()
+$Principal = New-Object Security.Principal.WindowsPrincipal($CurrentIdentity)
+
+if (-not $Principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Error "This script must be run as Administrator."
+    exit 1
+}
+
+try {
+    # Create registry path if it doesn't exist
+    New-Item -Path $RegistryPath -Force | Out-Null
+
+    # Create or update the required registry value
+    New-ItemProperty `
+        -Path $RegistryPath `
+        -Name $ValueName `
+        -PropertyType DWord `
+        -Value $RequiredValue `
+        -Force | Out-Null
+
+    # Refresh Group Policy
+    Start-Process `
+        -FilePath "gpupdate.exe" `
+        -ArgumentList "/target:computer /force" `
+        -Wait `
+        -NoNewWindow
+
+    # Verify the setting
+    $ConfiguredValue = Get-ItemPropertyValue `
+        -Path $RegistryPath `
+        -Name $ValueName
+
+    if ($ConfiguredValue -eq $RequiredValue) {
+        Write-Host ""
+        Write-Host "PASS: STIG remediated successfully." -ForegroundColor Green
+        Write-Host "HKLM\SOFTWARE\Policies\Microsoft\Windows\Installer"
+        Write-Host "EnableUserControl = $ConfiguredValue (REG_DWORD)"
+        exit 0
+    }
+    else {
+        Write-Error "Remediation failed. EnableUserControl is set to $ConfiguredValue."
+        exit 1
+    }
+}
+catch {
+    Write-Error $_.Exception.Message
+    exit 1
+}
