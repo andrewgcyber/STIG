@@ -25,31 +25,71 @@
     PS C:\> .\__remediation_template(STIG-ID-WN10-AU-000500).ps1 
 #>
 
-# STIG Remediation:
-# Disable Windows Game Recording and Broadcasting
+# ============================================================
+# STIG ID: WN11-CC-000252
+# Title: Disable Windows Game Recording and Broadcasting
+#
+# Required setting:
+# HKLM\SOFTWARE\Policies\Microsoft\Windows\GameDVR
+# AllowGameDVR = 0 (REG_DWORD)
+# ============================================================
 
-$RegistryPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\GameDVR"
-$ValueName = "AllowGameDVR"
-$ValueData = 0
+$RegistryPath  = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\GameDVR"
+$ValueName     = "AllowGameDVR"
+$RequiredValue = 0
 
-# Create the registry path if it doesn't exist
-if (-not (Test-Path $RegistryPath)) {
-    New-Item -Path $RegistryPath -Force | Out-Null
+# Verify the script is running with administrative privileges
+$CurrentIdentity = [Security.Principal.WindowsIdentity]::GetCurrent()
+$Principal = New-Object Security.Principal.WindowsPrincipal($CurrentIdentity)
+
+if (-not $Principal.IsInRole(
+    [Security.Principal.WindowsBuiltInRole]::Administrator
+)) {
+    Write-Error "This script must be run as Administrator."
+    exit 1
 }
 
-# Create or update the registry value
-New-ItemProperty `
-    -Path $RegistryPath `
-    -Name $ValueName `
-    -PropertyType DWord `
-    -Value $ValueData `
-    -Force | Out-Null
+try {
+    # Create the registry path if it does not already exist
+    New-Item -Path $RegistryPath -Force -ErrorAction Stop | Out-Null
 
-# Refresh Group Policy
-gpupdate /force | Out-Null
+    # Create or update the required policy value
+    New-ItemProperty `
+        -Path $RegistryPath `
+        -Name $ValueName `
+        -PropertyType DWord `
+        -Value $RequiredValue `
+        -Force `
+        -ErrorAction Stop | Out-Null
 
-Write-Host "STIG remediated successfully." -ForegroundColor Green
-Write-Host "Windows Game Recording and Broadcasting has been Disabled."
+    # Refresh computer Group Policy
+    Start-Process `
+        -FilePath "gpupdate.exe" `
+        -ArgumentList "/target:computer /force" `
+        -Wait `
+        -NoNewWindow
 
-# Verify the setting
-Get-ItemProperty -Path $RegistryPath -Name $ValueName
+    # Verify the configured value
+    $ConfiguredValue = Get-ItemPropertyValue `
+        -Path $RegistryPath `
+        -Name $ValueName `
+        -ErrorAction Stop
+
+    if ($ConfiguredValue -eq $RequiredValue) {
+        Write-Host ""
+        Write-Host "PASS: WN11-CC-000252 has been remediated." `
+            -ForegroundColor Green
+        Write-Host "Registry setting:"
+        Write-Host "HKLM\SOFTWARE\Policies\Microsoft\Windows\GameDVR"
+        Write-Host "AllowGameDVR = $ConfiguredValue (REG_DWORD)"
+        exit 0
+    }
+    else {
+        Write-Error "Remediation failed. AllowGameDVR is set to $ConfiguredValue."
+        exit 1
+    }
+}
+catch {
+    Write-Error "Unable to remediate WN11-CC-000252: $($_.Exception.Message)"
+    exit 1
+}
