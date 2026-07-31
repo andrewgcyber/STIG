@@ -26,4 +26,48 @@
     PS C:\> .\__remediation_template(STIG-ID-WN10-AU-000500).ps1 
 #>
 
-# YOUR CODE GOES HERE
+# 
+#Requires -RunAsAdministrator
+
+<#
+STIG: Accounts: Rename guest account
+
+This script renames the built-in Guest account (RID 501)
+to "LocalVisitor" if it is still named "Guest".
+#>
+
+$NewGuestName = "LocalVisitor"
+
+try {
+    # Find the built-in Guest account (SID always ends in -501)
+    $Guest = Get-LocalUser | Where-Object { $_.SID.Value -match "-501$" }
+
+    if (-not $Guest) {
+        Write-Host "Built-in Guest account not found." -ForegroundColor Red
+        exit 1
+    }
+
+    if ($Guest.Name -eq $NewGuestName) {
+        Write-Host "Guest account is already compliant ($NewGuestName)." -ForegroundColor Green
+        exit 0
+    }
+
+    Rename-LocalUser -Name $Guest.Name -NewName $NewGuestName
+
+    gpupdate /target:computer /force | Out-Null
+
+    $Guest = Get-LocalUser | Where-Object { $_.SID.Value -match "-501$" }
+
+    if ($Guest.Name -eq $NewGuestName) {
+        Write-Host "STIG remediated successfully." -ForegroundColor Green
+        Write-Host ""
+        $Guest | Select-Object Name, Enabled, SID
+    }
+    else {
+        throw "Verification failed."
+    }
+}
+catch {
+    Write-Host "Remediation failed: $($_.Exception.Message)" -ForegroundColor Red
+    exit 1
+}
